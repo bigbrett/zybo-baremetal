@@ -164,6 +164,8 @@
     .equ GPIO_OEN0,            0xE000A208
     .equ GPIO_DATA0,           0xE000A040
     .equ GPIO0_PIN7,           0x80
+    .equ GPIO0_PIN7_MASK,      0xFFFFFF7F
+    .equ WAIT_1_SECOND,        3200000
     .global reset_handler
 
 /*
@@ -271,20 +273,44 @@ led_init:
     ldr r0, =GPIO_OEN0
     ldr r1, =GPIO0_PIN7
     str r1, [r0]
-// write a value to a pin using RMW
+    b led_blink // blink LED 
+
+led_blink:
+    bl led_on     
+    bl wait1
+    bl led_off
+    bl wait1
+    b led_blink
+
+// Turn on LED by writing to GPIO pin using RMW 
+led_on: 
+    push {r0-r2, lr}
     ldr r0, =GPIO_DATA0
     ldr r1, [r0]
     ldr r2, =GPIO0_PIN7
     ORR r1,r1,r2
     str r1,[r0]
+    pop {r0-r2, pc}
 
-forever:
-    add r0,r1,r1
-    b forever 
-     
-led_blink:
-    b led_blink
+led_off: 
+    push {r0-r2, lr}
+    ldr r0, =GPIO_DATA0
+    ldr r1, [r0]
+    ldr r2, =GPIO0_PIN7_MASK
+    AND r1, r1,r2
+    str r1,[r0]
+    pop {r0-r2, pc}
 
+wait1: 
+    push {r3, lr}
+    ldr r3, =WAIT_1_SECOND
+waitloop:
+    cmp r3, #0
+    beq waitend
+    sub r3, #1 
+    b waitloop
+waitend:
+    pop {r3,pc}
 
 /* ------------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------------ */
