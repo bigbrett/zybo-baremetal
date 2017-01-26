@@ -153,6 +153,20 @@
     .equ CPSR_FIQ, 0x40 /* disable FIQ interrupts */
 
 /*
+ * TODO These are the config values for ZYBO LED test program
+ *
+ */ 
+    .equ SLCR_UNLOCK_KEY,      0x0000DF0D
+    .equ SLCR_UNLOCK,          0xF8000008 
+    .equ MIO_PIN07_CTRL,       0xF800071C
+    .equ MIO_PIN07_CTRL_GPIO0, 0x00003200
+    .equ GPIO_DIRM0,           0xE000A204
+    .equ GPIO_OEN0,            0xE000A208
+    .equ GPIO_DATA0,           0xE000A040
+    .equ GPIO0_PIN7,           0x80
+    .global reset_handler
+
+/*
  * The linker script (Zynq.ld) places text in the "bootimage" section at the
  * start of the image.  The interrupt jump table (vector) lives at address 0x00000000 and
  * contains branch instructions to appropriate handlers.  Single-instruction
@@ -225,17 +239,52 @@ clearbss:
     blt clearbss
 
     /* Finally, transfer control to the user program */
-    b myprog
+    b led_init 
 
 /* ------------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------------ */
 
-myprog: 
-    mov r0, #0x1
-    add r1,r0,r0
-    b myprog
+//    .equ MIO_PIN07_CTRL,       0xF800071C
+//    .equ MIO_PIN07_CTRL_GPIO0, 0x00003200
+//    .equ GPIO_DIRM0,           0xE000A204
+//    .equ GPIO_OEN0,            0xE000A208
+//    .equ GPIO_DATA0,           0xE000A040
+//    .equ GPIO0_PIN7,           0x80
+
+led_init: 
+// unlock slcr registers
+    ldr r0, =SLCR_UNLOCK
+    ldr r1, =SLCR_UNLOCK_KEY
+    str r1,[r0]
+// configure MIO pin 7 as GPIObank0 signal 
+    ldr r0, =MIO_PIN07_CTRL
+    ldr r1, =MIO_PIN07_CTRL_GPIO0
+    ldr r2, [r0]
+    str r1, [r0]
+// configure GPIO0 pin 7 as output 
+    ldr r0, =GPIO_DIRM0
+    ldr r1, =GPIO0_PIN7
+    str r1, [r0]
+// set output enable by writing to GPIO.OEN_7 register
+    ldr r0, =GPIO_OEN0
+    ldr r1, =GPIO0_PIN7
+    str r1, [r0]
+// write a value to a pin using RMW
+    ldr r0, =GPIO_DATA0
+    ldr r1, [r0]
+    ldr r2, =GPIO0_PIN7
+    ORR r1,r1,r2
+    str r1,[r0]
+
+forever:
+    add r0,r1,r1
+    b forever 
+     
+led_blink:
+    b led_blink
+
 
 /* ------------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------------ */
